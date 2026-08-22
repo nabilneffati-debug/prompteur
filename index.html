@@ -54,6 +54,7 @@
   #passage .w { transition: color .18s, background .18s; padding:0 .04em; border-radius:6px; }
   #passage .w.read { color: var(--emerald); }
   #passage .w.current { color:#0c0a09; background: var(--emerald); }
+  #passage .line { margin:.35em 0; }
 
   .overlay { position:absolute; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.62); backdrop-filter:blur(4px); text-align:center; }
   .overlay p { color:var(--amber); font-size:18px; margin:12px 0; }
@@ -103,6 +104,9 @@
         <div class="left">
           <span id="count" class="muted" style="margin:0;"></span>
           <label class="ck"><input type="checkbox" id="autoEdit" checked /> Avance vocale automatique</label>
+          <label class="ck">Versets/écran
+            <input type="number" id="lpsInput" min="1" max="8" value="4" style="width:60px;background:#0c0a09;color:#f5f5f4;border:1px solid #44403c;border-radius:10px;padding:6px 8px;font-size:14px;outline:none;" />
+          </label>
         </div>
         <button class="btn-primary" id="start">▶ Lancer le prompteur</button>
       </div>
@@ -288,12 +292,21 @@
   loadNum.addEventListener("click", loadByNumber);
   surahNum.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); loadByNumber(); } });
 
+  var lpsInput = $("lpsInput");
+
   try { textEl.value = localStorage.getItem("vp_text") || SURAHS[0].text; } catch (e) { textEl.value = SURAHS[0].text; }
+  var LINES_PER_SCREEN = 4; // regroupe 4 versets/lignes par écran
+  try { var lps = parseInt(localStorage.getItem("vp_lps"), 10); if (lps >= 1 && lps <= 8) LINES_PER_SCREEN = lps; } catch (e) {}
   function pages() {
-    var blocks = textEl.value.split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean);
-    return blocks.length ? blocks : ["Collez un texte pour commencer."];
+    var lines = textEl.value.split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!lines.length) return ["Collez un texte pour commencer."];
+    var out = [];
+    for (var i = 0; i < lines.length; i += LINES_PER_SCREEN) {
+      out.push(lines.slice(i, i + LINES_PER_SCREEN).join("\n"));
+    }
+    return out;
   }
-  function refreshCount() { var n = pages().length; countEl.textContent = n + " écran" + (n > 1 ? "s" : ""); }
+  function refreshCount() { var n = pages().length; countEl.textContent = n + " écran" + (n > 1 ? "s" : "") + " · " + LINES_PER_SCREEN + " versets/écran"; }
   textEl.addEventListener("input", function () { try { localStorage.setItem("vp_text", textEl.value); } catch (e) {} refreshCount(); });
   refreshCount();
 
@@ -308,14 +321,19 @@
     if (index > p.length - 1) index = p.length - 1;
     if (index < 0) index = 0;
     var txt = p[index], ar = isArabic(txt);
-    var display = txt.split(/(\s+)/);
     curNorm = []; var wi = 0, html = "";
-    for (var i = 0; i < display.length; i++) {
-      var tok = display[i];
-      if (/^\s+$/.test(tok)) { html += tok; continue; }
-      var norm = normalize(tok);
-      if (norm) { curNorm.push(norm); html += '<span class="w" data-i="' + wi + '">' + tok + '</span>'; wi++; }
-      else { html += tok; }
+    var lines = txt.split(/\n/);
+    for (var L = 0; L < lines.length; L++) {
+      var display = lines[L].split(/(\s+)/);
+      html += '<div class="line">';
+      for (var i = 0; i < display.length; i++) {
+        var tok = display[i];
+        if (/^\s+$/.test(tok)) { html += " "; continue; }
+        var norm = normalize(tok);
+        if (norm) { curNorm.push(norm); html += '<span class="w" data-i="' + wi + '">' + tok + '</span>'; wi++; }
+        else if (tok) { html += tok; }
+      }
+      html += '</div>';
     }
     passage.innerHTML = html;
     passage.className = ar ? "ar" : "";
@@ -399,21 +417,31 @@
       }
       if (ptr > matchPtr) { matchPtr = ptr; paintWords(); }
 
-      // --- Changement de page : exige d'atteindre la FIN, piloté par la Sensibilité ---
-      // slack = nombre de derniers mots pouvant manquer. 40%→3, 60%→2, 80%→1, 90%→0.
-      var slack = Math.round((0.9 - threshold) * 6);
-      if (slack < 0) slack = 0; if (slack > 3) slack = 3;
-      var reachedEnd = matchPtr >= (curNorm.length - slack);
-      var enoughRead = (matchPtr / curNorm.length) >= 0.7; // au moins 70% lu dans l'ordre
+      // --- Changement de page : DÉTECTION DES 2 DERNIERS MOTS du bloc affiché ---
+      // On tourne dès que les 2 derniers mots du bloc sont reconnus (consécutivement).
+      // La Sensibilité ajuste la tolérance : bas = 1 mot final suffit, haut = les 2 exigés.
+      var tailN = curNorm.length >= 2 ? 2 : 1;
+      var lastWords = curNorm.slice(-tailN);          // 2 derniers mots du bloc
+      var scan = heard.slice(-6);                     // fenêtre récente d'écoute
 
-      // Filet : début NET du verset suivant (≥85%) après avoir bien avancé
-      var nw = wordsOf(p[index + 1] || "");
-      var head = nw.slice(0, Math.min(3, nw.length)).join(" ");
-      var heardHead = heard.slice(-3).join(" ");
-      var nextStarted = head && similarity(heardHead, head) >= 0.85 && enoughRead;
+      // cherche les 2 derniers mots dans l'ordre, proches l'un de l'autre
+      var hitLast = false, hitPrev = false;
+      for (var s = 0; s < scan.length; s++) {
+        if (wordEq(scan[s], lastWords[lastWords.length - 1])) hitLast = true;
+        if (lastWords.length === 2 && wordEq(scan[s], lastWords[0])) hitPrev = true;
+      }
 
-      if ((reachedEnd && enoughRead) || nextStarted) {
-        statusEl.textContent = "✅ Fin du verset (" + Math.round((matchPtr / curNorm.length) * 100) + " %)";
+      // Sensibilité haute (≥0.7) : exige les 2 mots. Sensibilité basse : le dernier mot suffit.
+      var strict = threshold >= 0.7;
+      var trigger = (lastWords.length === 2)
+        ? (strict ? (hitPrev && hitLast) : hitLast)
+        : hitLast;
+
+      // Garde-fou : au moins la moitié du bloc doit avoir été parcourue dans l'ordre
+      var enoughRead = (matchPtr / curNorm.length) >= 0.5;
+
+      if (trigger && enoughRead) {
+        statusEl.textContent = "✅ 2 derniers mots reconnus";
         if (index < p.length - 1) goto(index + 1);
         else statusEl.textContent = "🏁 Dernier écran atteint";
       }
@@ -464,6 +492,12 @@
   function showPlayer() { editor.style.display = "none"; player.style.display = "flex"; index = 0; render(); setProgress(0); statusEl.textContent = "Prêt à écouter"; }
   function showEditor() { stopListen(); player.style.display = "none"; editor.style.display = "block"; refreshCount(); }
 
+  lpsInput.value = LINES_PER_SCREEN;
+  lpsInput.addEventListener("change", function () {
+    var v = parseInt(lpsInput.value, 10);
+    if (v >= 1 && v <= 8) { LINES_PER_SCREEN = v; try { localStorage.setItem("vp_lps", String(v)); } catch (e) {} refreshCount(); }
+    else { lpsInput.value = LINES_PER_SCREEN; }
+  });
   $("start").addEventListener("click", function () { auto = autoEdit.checked; autoPlay.checked = auto; updateListenBtn(); showPlayer(); });
   $("edit").addEventListener("click", showEditor);
   $("fs").addEventListener("click", toggleFullscreen);
