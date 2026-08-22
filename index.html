@@ -127,6 +127,7 @@
       <button class="icon" id="fdown" title="Réduire">A−</button>
       <button class="icon" id="fup" title="Agrandir">A+</button>
       <button class="icon" id="fs" title="Plein écran">⛶</button>
+      <button class="icon" id="diagBtn" title="Diagnostic micro">🔎</button>
       <button class="icon" id="edit" title="Éditer">⚙</button>
     </div>
   </header>
@@ -149,6 +150,7 @@
         <div class="bar small" title="Progression dans le passage"><i id="progSmall"></i></div>
       </div>
       <div id="heard"></div>
+      <div id="debug" style="display:none;text-align:center;font-size:12px;color:#38bdf8;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:6px 10px;margin:0 auto;max-width:640px;font-family:monospace;"></div>
       <div class="controls">
         <button class="nav" id="prev" title="Précédent">‹</button>
         <button class="big listen" id="listen">🎙 Écouter</button>
@@ -461,13 +463,47 @@
     heardEl.textContent = ""; render();
   }
 
+  // ---- diagnostic micro ----
+  var dbg = { started:0, results:0, nomatch:0, audio:false, sound:false, speech:false, lastPhrase:"", lastError:"" };
+  var debugEl = $("debug"), debugOn = false;
+  function updateDebug() {
+    if (!debugOn) return;
+    debugEl.textContent =
+      "démarrages:" + dbg.started +
+      " · résultats:" + dbg.results +
+      " · nomatch:" + dbg.nomatch +
+      " | audio:" + (dbg.audio ? "✔" : "—") +
+      " son:" + (dbg.sound ? "✔" : "—") +
+      " parole:" + (dbg.speech ? "✔" : "—") +
+      (dbg.lastError ? " | ⚠ " + dbg.lastError : "") +
+      (dbg.lastPhrase ? " | « " + dbg.lastPhrase.slice(0, 40) + " »" : " | (aucune transcription)");
+  }
+  function toggleDebug() {
+    debugOn = !debugOn;
+    debugEl.style.display = debugOn ? "block" : "none";
+    if (debugOn) {
+      updateDebug();
+      // rappel diagnostic après 4 s d'écoute
+      setTimeout(function () {
+        if (debugOn && dbg.results === 0 && srRunning) {
+          debugEl.textContent += "  ⟶ Aucun résultat reçu : vérifiez le bon micro dans Chrome (🔒 ▸ Micro) et la langue du système.";
+        }
+      }, 4000);
+    }
+  }
+
   // ---- reconnaissance vocale ----
   function initRecognizer() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { statusEl.textContent = "Reconnaissance vocale non disponible dans ce navigateur"; return; }
     var r = new SR();
     r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-    r.onstart = function () { srRunning = true; statusEl.textContent = "🟢 Écoute en cours"; paintWords(); };
+    r.onstart = function () { srRunning = true; statusEl.textContent = "🟢 Écoute en cours"; paintWords(); dbg.started++; updateDebug(); };
+    r.onaudiostart  = function () { dbg.audio = true;  updateDebug(); };
+    r.onsoundstart  = function () { dbg.sound = true;  updateDebug(); };
+    r.onspeechstart = function () { dbg.speech = true; updateDebug(); };
+    r.onspeechend   = function () { dbg.speech = false; updateDebug(); };
+    r.onnomatch     = function () { dbg.nomatch++; updateDebug(); };
     r.onerror = function (e) {
       if (e.error === "no-speech") { statusEl.textContent = "⏸️ En attente de la reprise…"; return; }
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
@@ -486,6 +522,7 @@
         return;
       }
       if (e.error !== "aborted") statusEl.textContent = "Micro : " + e.error;
+      dbg.lastError = e.error; updateDebug();
     };
     r.onend = function () {
       srRunning = false;
@@ -505,6 +542,7 @@
       for (var i = event.resultIndex; i < event.results.length; i++) phrase += " " + event.results[i][0].transcript;
       phrase = phrase.trim();
       heardEl.textContent = phrase ? "Entendu : " + phrase : "";
+      dbg.results++; dbg.lastPhrase = phrase; updateDebug();
 
       var heard = wordsOf(phrase);
       var p = pages();
@@ -654,6 +692,7 @@
   $("start").addEventListener("click", function () { auto = autoEdit.checked; autoPlay.checked = auto; updateListenBtn(); showPlayer(); });
   $("edit").addEventListener("click", showEditor);
   $("fs").addEventListener("click", toggleFullscreen);
+  $("diagBtn").addEventListener("click", toggleDebug);
   $("fdown").addEventListener("click", function () { fontSize = Math.max(28, fontSize - 4); render(); });
   $("fup").addEventListener("click", function () { fontSize = Math.min(110, fontSize + 4); render(); });
   $("prev").addEventListener("click", function () { goto(index - 1); });
