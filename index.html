@@ -13,14 +13,13 @@
   button { font: inherit; cursor: pointer; border:none; }
   .hidden { display:none !important; }
 
-  /* ---------- ÉCRAN D'ÉDITION ---------- */
   #editor { min-height:100vh; padding:20px; }
   .wrap { max-width: 900px; margin: 0 auto; }
   .tag { color: var(--emerald); font-weight:600; margin:0; }
   h1 { font-size: clamp(28px,5vw,48px); margin:4px 0 6px; }
   .muted { color:#a8a29e; margin:0 0 16px; font-size:15px; }
   textarea {
-    width:100%; min-height:48vh; resize:vertical; border-radius:18px;
+    width:100%; min-height:44vh; resize:vertical; border-radius:18px;
     background:#0c0a09; border:1px solid #44403c; color:#f5f5f4;
     padding:18px; font-size:22px; line-height:1.9; outline:none;
   }
@@ -41,7 +40,6 @@
   .btn-primary:hover { background:#6ee7b7; }
   .hint { color:#78716c; font-size:12px; margin-top:12px; }
 
-  /* ---------- ÉCRAN PROMPTEUR ---------- */
   #player { display:none; flex-direction:column; height:100vh; background:#000; }
   header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.1); }
   .screen-num { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--emerald); }
@@ -83,19 +81,16 @@
 </head>
 <body>
 
-<!-- ÉCRAN D'ÉDITION -->
 <div id="editor">
   <div class="wrap">
     <p class="tag">Prompteur vocal</p>
     <h1>Préparer la récitation</h1>
-    <p class="muted">Une ligne vide crée un nouvel écran. Le texte est sauvegardé automatiquement dans ce navigateur.</p>
+    <p class="muted">Chaque retour à la ligne crée un nouvel écran. Le texte est sauvegardé automatiquement dans ce navigateur.</p>
     <div class="card">
       <div class="library">
         <label for="surah">📖 Bibliothèque de sourates :</label>
-        <select id="surah">
-          <option value="">— Choisir une sourate —</option>
-        </select>
-        <span class="lib-hint">Charge le texte dans la zone ci-dessous (un verset = un écran).</span>
+        <select id="surah"><option value="">— Choisir une sourate —</option></select>
+        <span class="lib-hint">Charge le texte ci-dessous (un verset = un écran).</span>
       </div>
       <div class="library">
         <label for="surahNum">🔢 Charger n'importe quelle sourate (1–114) :</label>
@@ -112,11 +107,10 @@
         <button class="btn-primary" id="start">▶ Lancer le prompteur</button>
       </div>
     </div>
-    <p class="hint">Astuce : utilisez Chrome ou Edge et autorisez le micro. En prière, l'écran reste allumé automatiquement.</p>
+    <p class="hint">Astuce : ouvrez l'app en https:// (GitHub Pages) et autorisez le micro. En prière, l'écran reste allumé.</p>
   </div>
 </div>
 
-<!-- ÉCRAN PROMPTEUR -->
 <div id="player">
   <header>
     <div style="min-width:0;">
@@ -150,7 +144,7 @@
         <div class="bar small" title="Progression dans le passage"><i id="progSmall"></i></div>
       </div>
       <div id="heard"></div>
-      <div id="debug" style="display:none;text-align:center;font-size:12px;color:#38bdf8;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:6px 10px;margin:0 auto;max-width:640px;font-family:monospace;"></div>
+      <div id="debug" style="display:none;text-align:center;font-size:12px;color:#38bdf8;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.25);border-radius:10px;padding:6px 10px;margin:0 auto;max-width:660px;font-family:monospace;"></div>
       <div class="controls">
         <button class="nav" id="prev" title="Précédent">‹</button>
         <button class="big listen" id="listen">🎙 Écouter</button>
@@ -173,71 +167,31 @@
 (function () {
   "use strict";
 
-  var demo =
-    "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\n" +
-    "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ\n" +
-    "الرَّحْمَٰنِ الرَّحِيمِ\n" +
-    "مَالِكِ يَوْمِ الدِّينِ\n" +
-    "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ\n" +
-    "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ\n" +
-    "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ";
-
-  // ---- bibliothèque de sourates (un verset par ligne = un écran) ----
   var SURAHS = [
-    { n: 1, name: "الفاتحة — Al-Fâtiha (L'ouverture)", text:
+    { n: 1, name: "الفاتحة — Al-Fâtiha", text:
       "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\nالْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ\nالرَّحْمَٰنِ الرَّحِيمِ\nمَالِكِ يَوْمِ الدِّينِ\nإِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ\nاهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ\nصِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ" },
-    { n: 93, name: "الضحى — Ad-Duhâ (Le jour montant)", text:
-      "وَالضُّحَىٰ\nوَاللَّيْلِ إِذَا سَجَىٰ\nمَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ\nوَلَلْآخِرَةُ خَيْرٌ لَّكَ مِنَ الْأُولَىٰ\nوَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ\nأَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ\nوَوَجَدَكَ ضَالًّا فَهَدَىٰ\nوَوَجَدَكَ عَائِلًا فَأَغْنَىٰ\nفَأَمَّا الْيَتِيمَ فَلَا تَقْهَرْ\nوَأَمَّا السَّائِلَ فَلَا تَنْهَرْ\nوَأَمَّا بِنِعْمَةِ رَبِّكَ فَحَدِّثْ" },
-    { n: 94, name: "الشرح — Ash-Sharh (L'ouverture de la poitrine)", text:
-      "أَلَمْ نَشْرَحْ لَكَ صَدْرَكَ\nوَوَضَعْنَا عَنكَ وِزْرَكَ\nالَّذِي أَنقَضَ ظَهْرَكَ\nوَرَفَعْنَا لَكَ ذِكْرَكَ\nفَإِنَّ مَعَ الْعُسْرِ يُسْرًا\nإِنَّ مَعَ الْعُسْرِ يُسْرًا\nفَإِذَا فَرَغْتَ فَانصَبْ\nوَإِلَىٰ رَبِّكَ فَارْغَب" },
-    { n: 95, name: "التين — At-Tîn (Le figuier)", text:
-      "وَالتِّينِ وَالزَّيْتُونِ\nوَطُورِ سِينِينَ\nوَهَٰذَا الْبَلَدِ الْأَمِينِ\nلَقَدْ خَلَقْنَا الْإِنسَانَ فِي أَحْسَنِ تَقْوِيمٍ\nثُمَّ رَدَدْنَاهُ أَسْفَلَ سَافِلِينَ\nإِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ فَلَهُمْ أَجْرٌ غَيْرُ مَمْنُونٍ\nفَمَا يُكَذِّبُكَ بَعْدُ بِالدِّينِ\nأَلَيْسَ اللَّهُ بِأَحْكَمِ الْحَاكِمِينَ" },
-    { n: 97, name: "القدر — Al-Qadr (La destinée)", text:
-      "إِنَّا أَنزَلْنَاهُ فِي لَيْلَةِ الْقَدْرِ\nوَمَا أَدْرَاكَ مَا لَيْلَةُ الْقَدْرِ\nلَيْلَةُ الْقَدْرِ خَيْرٌ مِّنْ أَلْفِ شَهْرٍ\nتَنَزَّلُ الْمَلَائِكَةُ وَالرُّوحُ فِيهَا بِإِذْنِ رَبِّهِم مِّن كُلِّ أَمْرٍ\nسَلَامٌ هِيَ حَتَّىٰ مَطْلَعِ الْفَجْرِ" },
-    { n: 99, name: "الزلزلة — Az-Zalzala (La secousse)", text:
-      "إِذَا زُلْزِلَتِ الْأَرْضُ زِلْزَالَهَا\nوَأَخْرَجَتِ الْأَرْضُ أَثْقَالَهَا\nوَقَالَ الْإِنسَانُ مَا لَهَا\nيَوْمَئِذٍ تُحَدِّثُ أَخْبَارَهَا\nبِأَنَّ رَبَّكَ أَوْحَىٰ لَهَا\nيَوْمَئِذٍ يَصْدُرُ النَّاسُ أَشْتَاتًا لِّيُرَوْا أَعْمَالَهُمْ\nفَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ خَيْرًا يَرَهُ\nوَمَن يَعْمَلْ مِثْقَالَ ذَرَّةٍ شَرًّا يَرَهُ" },
-    { n: 103, name: "العصر — Al-'Asr (Le temps)", text:
-      "وَالْعَصْرِ\nإِنَّ الْإِنسَانَ لَفِي خُسْرٍ\nإِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ" },
-    { n: 104, name: "الهمزة — Al-Humaza (Les calomniateurs)", text:
-      "وَيْلٌ لِّكُلِّ هُمَزَةٍ لُّمَزَةٍ\nالَّذِي جَمَعَ مَالًا وَعَدَّدَهُ\nيَحْسَبُ أَنَّ مَالَهُ أَخْلَدَهُ\nكَلَّا لَيُنبَذَنَّ فِي الْحُطَمَةِ\nوَمَا أَدْرَاكَ مَا الْحُطَمَةُ\nنَارُ اللَّهِ الْمُوقَدَةُ\nالَّتِي تَطَّلِعُ عَلَى الْأَفْئِدَةِ\nإِنَّهَا عَلَيْهِم مُّؤْصَدَةٌ\nفِي عَمَدٍ مُّمَدَّدَةٍ" },
-    { n: 105, name: "الفيل — Al-Fîl (L'éléphant)", text:
-      "أَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِأَصْحَابِ الْفِيلِ\nأَلَمْ يَجْعَلْ كَيْدَهُمْ فِي تَضْلِيلٍ\nوَأَرْسَلَ عَلَيْهِمْ طَيْرًا أَبَابِيلَ\nتَرْمِيهِم بِحِجَارَةٍ مِّن سِجِّيلٍ\nفَجَعَلَهُمْ كَعَصْفٍ مَّأْكُولٍ" },
-    { n: 106, name: "قريش — Quraysh", text:
-      "لِإِيلَافِ قُرَيْشٍ\nإِيلَافِهِمْ رِحْلَةَ الشِّتَاءِ وَالصَّيْفِ\nفَلْيَعْبُدُوا رَبَّ هَٰذَا الْبَيْتِ\nالَّذِي أَطْعَمَهُم مِّن جُوعٍ وَآمَنَهُم مِّنْ خَوْفٍ" },
-    { n: 107, name: "الماعون — Al-Mâ'ûn (L'ustensile)", text:
-      "أَرَأَيْتَ الَّذِي يُكَذِّبُ بِالدِّينِ\nفَذَٰلِكَ الَّذِي يَدُعُّ الْيَتِيمَ\nوَلَا يَحُضُّ عَلَىٰ طَعَامِ الْمِسْكِينِ\nفَوَيْلٌ لِّلْمُصَلِّينَ\nالَّذِينَ هُمْ عَن صَلَاتِهِمْ سَاهُونَ\nالَّذِينَ هُمْ يُرَاءُونَ\nوَيَمْنَعُونَ الْمَاعُونَ" },
-    { n: 108, name: "الكوثر — Al-Kawthar (L'abondance)", text:
-      "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ\nفَصَلِّ لِرَبِّكَ وَانْحَرْ\nإِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ" },
-    { n: 109, name: "الكافرون — Al-Kâfirûn (Les mécréants)", text:
-      "قُلْ يَا أَيُّهَا الْكَافِرُونَ\nلَا أَعْبُدُ مَا تَعْبُدُونَ\nوَلَا أَنتُمْ عَابِدُونَ مَا أَعْبُدُ\nوَلَا أَنَا عَابِدٌ مَّا عَبَدتُّمْ\nوَلَا أَنتُمْ عَابِدُونَ مَا أَعْبُدُ\nلَكُمْ دِينُكُمْ وَلِيَ دِينِ" },
-    { n: 110, name: "النصر — An-Nasr (Le secours)", text:
-      "إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ\nوَرَأَيْتَ النَّاسَ يَدْخُلُونَ فِي دِينِ اللَّهِ أَفْوَاجًا\nفَسَبِّحْ بِحَمْدِ رَبِّكَ وَاسْتَغْفِرْهُ إِنَّهُ كَانَ تَوَّابًا" },
-    { n: 111, name: "المسد — Al-Masad (Les fibres)", text:
-      "تَبَّتْ يَدَا أَبِي لَهَبٍ وَتَبَّ\nمَا أَغْنَىٰ عَنْهُ مَالُهُ وَمَا كَسَبَ\nسَيَصْلَىٰ نَارًا ذَاتَ لَهَبٍ\nوَامْرَأَتُهُ حَمَّالَةَ الْحَطَبِ\nفِي جِيدِهَا حَبْلٌ مِّن مَّسَدٍ" },
-    { n: 112, name: "الإخلاص — Al-Ikhlâs (Le monothéisme pur)", text:
+    { n: 112, name: "الإخلاص — Al-Ikhlâs", text:
       "قُلْ هُوَ اللَّهُ أَحَدٌ\nاللَّهُ الصَّمَدُ\nلَمْ يَلِدْ وَلَمْ يُولَدْ\nوَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ" },
-    { n: 113, name: "الفلق — Al-Falaq (L'aube naissante)", text:
+    { n: 113, name: "الفلق — Al-Falaq", text:
       "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ\nمِن شَرِّ مَا خَلَقَ\nوَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ\nوَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ\nوَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ" },
-    { n: 114, name: "الناس — An-Nâs (Les hommes)", text:
+    { n: 114, name: "الناس — An-Nâs", text:
       "قُلْ أَعُوذُ بِرَبِّ النَّاسِ\nمَلِكِ النَّاسِ\nإِلَٰهِ النَّاسِ\nمِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ\nالَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ\nمِنَ الْجِنَّةِ وَالنَّاسِ" },
-    // Sourates longues : chargées depuis une source coranique authentique (Al-Quran Cloud) puis mises en cache pour usage hors connexion
-    { n: 18, name: "الكهف — Al-Kahf (La caverne) — 110 versets", fetch: true },
-    { n: 36, name: "يس — Yâ-Sîn — 83 versets", fetch: true },
-    { n: 67, name: "الملك — Al-Mulk (La royauté) — 30 versets", fetch: true }
+    { n: 108, name: "الكوثر — Al-Kawthar", text:
+      "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ\nفَصَلِّ لِرَبِّكَ وَانْحَرْ\nإِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ" },
+    { n: 103, name: "العصر — Al-'Asr", text:
+      "وَالْعَصْرِ\nإِنَّ الْإِنسَانَ لَفِي خُسْرٍ\nإِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ" },
+    { n: 18, name: "الكهف — Al-Kahf (110 versets)", fetch: true },
+    { n: 36, name: "يس — Yâ-Sîn (83 versets)", fetch: true },
+    { n: 67, name: "الملك — Al-Mulk (30 versets)", fetch: true }
   ];
 
-  // Charge une sourate depuis l'API (texte Uthmani), avec cache localStorage
   function loadSurahRemote(n, onDone, onError) {
     var cacheKey = "vp_surah_" + n;
-    try {
-      var cached = localStorage.getItem(cacheKey);
-      if (cached) { onDone(cached); return; }
-    } catch (e) {}
-    var url = "https://api.alquran.cloud/v1/surah/" + n + "/quran-uthmani";
-    fetch(url)
+    try { var c = localStorage.getItem(cacheKey); if (c) { onDone(c); return; } } catch (e) {}
+    fetch("https://api.alquran.cloud/v1/surah/" + n + "/quran-uthmani")
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (j) {
-        if (!j || !j.data || !j.data.ayahs) throw new Error("Format inattendu");
+        if (!j || !j.data || !j.data.ayahs) throw new Error("Format");
         var txt = j.data.ayahs.map(function (a) { return a.text.trim(); }).join("\n");
         try { localStorage.setItem(cacheKey, txt); } catch (e) {}
         onDone(txt);
@@ -245,61 +199,37 @@
       .catch(function (err) { onError(err); });
   }
 
-  // ---- utilitaires ----
+  // ---- normalisation & comparaison floue ----
   function normalize(s) {
     return (s || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g, "") // voyelles + alef suscrit
-      .replace(/\u0640/g, "")                              // tatweel ـ
-      .replace(/[إأآٱا]/g, "ا")                            // toutes formes de alef
-      .replace(/ؤ/g, "و")                                  // hamza sur waw
-      .replace(/[ئى]/g, "ي")                               // hamza sur ya / alef maksura
-      .replace(/ء/g, "")                                   // hamza isolée
-      .replace(/ة/g, "ه")                                  // ta marbuta
+      .toLowerCase().normalize("NFD")
+      .replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g, "")
+      .replace(/\u0640/g, "")
+      .replace(/[إأآٱا]/g, "ا")
+      .replace(/ؤ/g, "و").replace(/[ئى]/g, "ي").replace(/ء/g, "")
+      .replace(/ة/g, "ه")
       .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+      .replace(/\s+/g, " ").trim();
   }
   function wordsOf(s) { return normalize(s).split(" ").filter(Boolean); }
-
-  // distance de Levenshtein (petite, pour mots courts)
   function lev(a, b) {
     if (a === b) return 0;
-    var la = a.length, lb = b.length;
-    if (!la) return lb; if (!lb) return la;
-    var prev = [], i, j;
-    for (j = 0; j <= lb; j++) prev[j] = j;
-    for (i = 1; i <= la; i++) {
-      var cur = [i];
-      for (j = 1; j <= lb; j++) {
-        var cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
-        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
-      }
-      prev = cur;
-    }
+    var la = a.length, lb = b.length; if (!la) return lb; if (!lb) return la;
+    var prev = [], i, j; for (j = 0; j <= lb; j++) prev[j] = j;
+    for (i = 1; i <= la; i++) { var cur = [i];
+      for (j = 1; j <= lb; j++) { var c = a.charCodeAt(i-1) === b.charCodeAt(j-1) ? 0 : 1;
+        cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+c); } prev = cur; }
     return prev[lb];
   }
-  // égalité "floue" entre deux mots (tolère l'orthographe coranique vs moderne)
   function wordEq(a, b) {
     if (!a || !b) return false;
     if (a === b) return true;
     var minLen = Math.min(a.length, b.length);
-    if (minLen >= 3 && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) return true; // même racine/préfixe
+    // préfixe commun seulement pour mots assez longs (évite faux positifs sur mots courts)
+    if (minLen >= 4 && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) return true;
     var maxLen = Math.max(a.length, b.length);
-    var tol = maxLen >= 6 ? 2 : 1;
+    var tol = maxLen >= 7 ? 2 : (maxLen >= 4 ? 1 : 0);
     return lev(a, b) <= tol;
-  }
-  // taux de couverture : combien de mots du passage sont retrouvés (flou) dans ce qui est entendu
-  function coverage(pageWords, heardWords) {
-    if (!pageWords.length) return 0;
-    var found = 0;
-    for (var i = 0; i < pageWords.length; i++) {
-      for (var j = 0; j < heardWords.length; j++) {
-        if (wordEq(pageWords[i], heardWords[j])) { found++; break; }
-      }
-    }
-    return found / pageWords.length;
   }
   function similarity(a, b) {
     var aa = wordsOf(a), bb = wordsOf(b);
@@ -312,7 +242,6 @@
   }
   function isArabic(s) { return /[\u0600-\u06FF]/.test(s || ""); }
 
-  // ---- éléments ----
   var $ = function (id) { return document.getElementById(id); };
   var editor = $("editor"), player = $("player");
   var textEl = $("text"), countEl = $("count");
@@ -322,112 +251,65 @@
   var listenBtn = $("listen"), pauseBtn = $("pauseBtn");
   var thr = $("thr"), thrVal = $("thrVal");
   var autoPlay = $("autoPlay"), autoEdit = $("autoEdit");
-  var surahSel = $("surah");
+  var surahSel = $("surah"), debugEl = $("debug");
 
-  // remplir la bibliothèque
-  SURAHS.forEach(function (s) {
-    var o = document.createElement("option");
-    o.value = String(s.n);
-    o.textContent = s.n + ". " + s.name;
-    surahSel.appendChild(o);
-  });
-  surahSel.addEventListener("change", function () {
-    var s = SURAHS.filter(function (x) { return String(x.n) === surahSel.value; })[0];
-    if (!s) return;
-    function apply(txt) {
-      textEl.value = txt;
-      try { localStorage.setItem("vp_text", textEl.value); } catch (e) {}
-      refreshCount();
-      textEl.scrollTop = 0;
-      surahSel.disabled = false;
-    }
-    if (s.fetch) {
-      surahSel.disabled = true;
-      textEl.value = "⏳ Chargement de la sourate depuis une source authentique…";
-      loadSurahRemote(
-        s.n,
-        function (txt) { apply(txt); },
-        function () {
-          surahSel.disabled = false;
-          textEl.value = "⚠️ Impossible de charger cette sourate (connexion internet requise au premier chargement). Réessayez une fois connecté.";
-        }
-      );
-    } else {
-      apply(s.text);
-    }
-  });
-
-  // ---- charger n'importe quelle sourate (1–114) par numéro ----
-  var surahNum = $("surahNum"), loadNum = $("loadNum"), numStatus = $("numStatus");
-  function loadByNumber() {
-    var n = parseInt(surahNum.value, 10);
-    if (!(n >= 1 && n <= 114)) { numStatus.textContent = "⚠️ Entrez un numéro entre 1 et 114."; return; }
-    numStatus.textContent = "⏳ Chargement de la sourate " + n + "…";
-    loadNum.disabled = true;
-    loadSurahRemote(
-      n,
-      function (txt) {
-        textEl.value = txt;
-        try { localStorage.setItem("vp_text", textEl.value); } catch (e) {}
-        refreshCount(); textEl.scrollTop = 0;
-        numStatus.textContent = "✅ Sourate " + n + " chargée (mise en cache pour hors ligne).";
-        loadNum.disabled = false;
-        surahSel.value = "";
-      },
-      function () {
-        numStatus.textContent = "⚠️ Échec — connexion internet requise au premier chargement.";
-        loadNum.disabled = false;
-      }
-    );
-  }
-  loadNum.addEventListener("click", loadByNumber);
-  surahNum.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); loadByNumber(); } });
-
-  // ---- état ----
   var index = 0, listening = false, paused = false, fontSize = 52;
   var threshold = 0.6, auto = true;
   var recognizer = null, restartWanted = false, wakeLock = null;
   var srRunning = false, micGranted = false;
 
-  // ---- texte + pages ----
-  try { textEl.value = localStorage.getItem("vp_text") || demo; } catch (e) { textEl.value = demo; }
+  // remplir la bibliothèque
+  SURAHS.forEach(function (s) {
+    var o = document.createElement("option");
+    o.value = String(s.n); o.textContent = s.n + ". " + s.name;
+    surahSel.appendChild(o);
+  });
+  surahSel.addEventListener("change", function () {
+    var s = SURAHS.filter(function (x) { return String(x.n) === surahSel.value; })[0];
+    if (!s) return;
+    function apply(txt) { textEl.value = txt; try { localStorage.setItem("vp_text", txt); } catch (e) {} refreshCount(); textEl.scrollTop = 0; surahSel.disabled = false; }
+    if (s.fetch) {
+      surahSel.disabled = true; textEl.value = "⏳ Chargement…";
+      loadSurahRemote(s.n, apply, function () { surahSel.disabled = false; textEl.value = "⚠️ Échec du chargement (connexion requise au 1er chargement)."; });
+    } else { apply(s.text); }
+  });
+
+  var surahNum = $("surahNum"), loadNum = $("loadNum"), numStatus = $("numStatus");
+  function loadByNumber() {
+    var n = parseInt(surahNum.value, 10);
+    if (!(n >= 1 && n <= 114)) { numStatus.textContent = "⚠️ Numéro entre 1 et 114."; return; }
+    numStatus.textContent = "⏳ Chargement de la sourate " + n + "…"; loadNum.disabled = true;
+    loadSurahRemote(n, function (txt) {
+      textEl.value = txt; try { localStorage.setItem("vp_text", txt); } catch (e) {}
+      refreshCount(); textEl.scrollTop = 0;
+      numStatus.textContent = "✅ Sourate " + n + " chargée (cache hors ligne)."; loadNum.disabled = false; surahSel.value = "";
+    }, function () { numStatus.textContent = "⚠️ Échec — connexion requise au 1er chargement."; loadNum.disabled = false; });
+  }
+  loadNum.addEventListener("click", loadByNumber);
+  surahNum.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); loadByNumber(); } });
+
+  try { textEl.value = localStorage.getItem("vp_text") || SURAHS[0].text; } catch (e) { textEl.value = SURAHS[0].text; }
   function pages() {
     var blocks = textEl.value.split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean);
     return blocks.length ? blocks : ["Collez un texte pour commencer."];
   }
-  function refreshCount() {
-    var n = pages().length;
-    countEl.textContent = n + " écran" + (n > 1 ? "s" : "");
-  }
-  textEl.addEventListener("input", function () {
-    try { localStorage.setItem("vp_text", textEl.value); } catch (e) {}
-    refreshCount();
-  });
+  function refreshCount() { var n = pages().length; countEl.textContent = n + " écran" + (n > 1 ? "s" : ""); }
+  textEl.addEventListener("input", function () { try { localStorage.setItem("vp_text", textEl.value); } catch (e) {} refreshCount(); });
   refreshCount();
 
-  // ---- Wake Lock (écran allumé) ----
-  function requestWakeLock() {
-    try { if ("wakeLock" in navigator) navigator.wakeLock.request("screen").then(function (w) { wakeLock = w; }); } catch (e) {}
-  }
+  function requestWakeLock() { try { if ("wakeLock" in navigator) navigator.wakeLock.request("screen").then(function (w) { wakeLock = w; }); } catch (e) {} }
   function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && restartWanted) requestWakeLock();
-  });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && restartWanted) requestWakeLock(); });
 
-  // ---- rendu ----
-  var curNorm = [];   // mots normalisés du passage courant
-  var matchPtr = 0;   // combien de mots reconnus dans l'ordre
-
+  // ---- rendu + surbrillance ----
+  var curNorm = [], matchPtr = 0;
   function render() {
     var p = pages();
     if (index > p.length - 1) index = p.length - 1;
     if (index < 0) index = 0;
-    var txt = p[index];
-    var ar = isArabic(txt);
-    // découpe en mots pour la surbrillance
-    var display = txt.split(/(\s+)/); // garde les espaces
-    curNorm = [];
-    var wi = 0, html = "";
+    var txt = p[index], ar = isArabic(txt);
+    var display = txt.split(/(\s+)/);
+    curNorm = []; var wi = 0, html = "";
     for (var i = 0; i < display.length; i++) {
       var tok = display[i];
       if (/^\s+$/.test(tok)) { html += tok; continue; }
@@ -444,52 +326,30 @@
     $("prev").disabled = index === 0;
     $("next").disabled = index === p.length - 1;
     ovScr.textContent = index + 1;
-    matchPtr = 0;
-    paintWords();
+    matchPtr = 0; paintWords();
   }
-
   function paintWords() {
     var spans = passage.querySelectorAll(".w");
-    for (var i = 0; i < spans.length; i++) {
+    for (var i = 0; i < spans.length; i++)
       spans[i].className = "w" + (i < matchPtr ? " read" : (i === matchPtr && srRunning ? " current" : ""));
-    }
     setProgress(curNorm.length ? matchPtr / curNorm.length : 0);
   }
-
   function setProgress(v) { progSmall.style.width = Math.round(v * 100) + "%"; }
-  function goto(i) {
-    var p = pages();
-    index = Math.max(0, Math.min(i, p.length - 1));
-    heardEl.textContent = ""; render();
-  }
+  function goto(i) { var p = pages(); index = Math.max(0, Math.min(i, p.length - 1)); heardEl.textContent = ""; render(); }
 
-  // ---- diagnostic micro ----
+  // ---- diagnostic ----
   var dbg = { started:0, results:0, nomatch:0, audio:false, sound:false, speech:false, lastPhrase:"", lastError:"" };
-  var debugEl = $("debug"), debugOn = false;
+  var debugOn = false;
   function updateDebug() {
     if (!debugOn) return;
     debugEl.textContent =
-      "démarrages:" + dbg.started +
-      " · résultats:" + dbg.results +
-      " · nomatch:" + dbg.nomatch +
-      " | audio:" + (dbg.audio ? "✔" : "—") +
-      " son:" + (dbg.sound ? "✔" : "—") +
-      " parole:" + (dbg.speech ? "✔" : "—") +
+      "démarr:" + dbg.started + " · résultats:" + dbg.results + " · nomatch:" + dbg.nomatch +
+      " | audio:" + (dbg.audio ? "✔" : "—") + " son:" + (dbg.sound ? "✔" : "—") + " parole:" + (dbg.speech ? "✔" : "—") +
       (dbg.lastError ? " | ⚠ " + dbg.lastError : "") +
       (dbg.lastPhrase ? " | « " + dbg.lastPhrase.slice(0, 40) + " »" : " | (aucune transcription)");
   }
   function toggleDebug() {
-    debugOn = !debugOn;
-    debugEl.style.display = debugOn ? "block" : "none";
-    if (debugOn) {
-      updateDebug();
-      // rappel diagnostic après 4 s d'écoute
-      setTimeout(function () {
-        if (debugOn && dbg.results === 0 && srRunning) {
-          debugEl.textContent += "  ⟶ Aucun résultat reçu : vérifiez le bon micro dans Chrome (🔒 ▸ Micro) et la langue du système.";
-        }
-      }, 4000);
-    }
+    debugOn = !debugOn; debugEl.style.display = debugOn ? "block" : "none"; if (debugOn) updateDebug();
   }
 
   // ---- reconnaissance vocale ----
@@ -499,43 +359,24 @@
     var r = new SR();
     r.lang = "ar-SA"; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
     r.onstart = function () { srRunning = true; statusEl.textContent = "🟢 Écoute en cours"; paintWords(); dbg.started++; updateDebug(); };
-    r.onaudiostart  = function () { dbg.audio = true;  updateDebug(); };
-    r.onsoundstart  = function () { dbg.sound = true;  updateDebug(); };
+    r.onaudiostart  = function () { dbg.audio = true; updateDebug(); };
+    r.onsoundstart  = function () { dbg.sound = true; updateDebug(); };
     r.onspeechstart = function () { dbg.speech = true; updateDebug(); };
     r.onspeechend   = function () { dbg.speech = false; updateDebug(); };
     r.onnomatch     = function () { dbg.nomatch++; updateDebug(); };
     r.onerror = function (e) {
       if (e.error === "no-speech") { statusEl.textContent = "⏸️ En attente de la reprise…"; return; }
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        restartWanted = false;
-        statusEl.textContent = "🚫 Micro bloqué : autorisez le microphone (cadenas 🔒 de la barre d'adresse) puis relancez.";
-        return;
-      }
-      if (e.error === "audio-capture") {
-        restartWanted = false;
-        statusEl.textContent = "🎙️ Aucun micro détecté. Vérifiez votre matériel.";
-        return;
-      }
-      if (e.error === "network") {
-        restartWanted = false; listening = false; updateListenBtn();
-        statusEl.textContent = "🌐 Le moteur vocal ne démarre pas en fichier local. Ouvrez l'app en http:// (serveur local ou GitLab Pages).";
-        return;
-      }
-      if (e.error !== "aborted") statusEl.textContent = "Micro : " + e.error;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") { restartWanted = false; statusEl.textContent = "🚫 Micro bloqué : autorisez-le (🔒 barre d'adresse) puis relancez."; }
+      else if (e.error === "audio-capture") { restartWanted = false; statusEl.textContent = "🎙️ Aucun micro détecté."; }
+      else if (e.error === "network") { restartWanted = false; listening = false; updateListenBtn(); statusEl.textContent = "🌐 Ouvrez l'app en https:// (le moteur ne marche pas en fichier local)."; }
+      else if (e.error !== "aborted") statusEl.textContent = "Micro : " + e.error;
       dbg.lastError = e.error; updateDebug();
     };
     r.onend = function () {
       srRunning = false;
       if (restartWanted && !paused) {
-        // redémarrage différé pour éviter InvalidStateError
-        setTimeout(function () {
-          if (restartWanted && !paused && !srRunning) {
-            try { r.start(); } catch (e) {}
-          }
-        }, 250);
-      } else {
-        listening = false; updateListenBtn(); paintWords();
-      }
+        setTimeout(function () { if (restartWanted && !paused && !srRunning) { try { r.start(); } catch (e) {} } }, 250);
+      } else { listening = false; updateListenBtn(); paintWords(); }
     };
     r.onresult = function (event) {
       var phrase = "";
@@ -548,147 +389,81 @@
       var p = pages();
       if (!curNorm.length || !heard.length) return;
 
-      // --- Suivi progressif mot-à-mot avec comparaison FLOUE (tolère graphie coranique vs moderne) ---
+      // --- Suivi STRICTEMENT DANS L'ORDRE (pilote la surbrillance ET le changement) ---
       var recent = heard.slice(-40);
       var ptr = matchPtr;
       for (var h = 0; h < recent.length; h++) {
         if (ptr >= curNorm.length) break;
         if (wordEq(recent[h], curNorm[ptr])) { ptr++; continue; }
-        // saut d'un mot mal transcrit
-        if (ptr + 1 < curNorm.length && wordEq(recent[h], curNorm[ptr + 1])) { ptr += 2; continue; }
+        if (ptr + 1 < curNorm.length && wordEq(recent[h], curNorm[ptr + 1])) { ptr += 2; continue; } // tolère 1 mot mal transcrit
       }
       if (ptr > matchPtr) { matchPtr = ptr; paintWords(); }
 
-      // --- Détection par TAUX DE COUVERTURE (indépendant de l'ordre, robuste) ---
-      var cov = coverage(curNorm, recent);
-      // aligne aussi la surbrillance sur la couverture si elle est en avance
-      var covPtr = Math.round(cov * curNorm.length);
-      if (covPtr > matchPtr) { matchPtr = Math.min(covPtr, curNorm.length); paintWords(); }
+      // --- Changement de page : exige d'atteindre la FIN, piloté par la Sensibilité ---
+      // slack = nombre de derniers mots pouvant manquer. 40%→3, 60%→2, 80%→1, 90%→0.
+      var slack = Math.round((0.9 - threshold) * 6);
+      if (slack < 0) slack = 0; if (slack > 3) slack = 3;
+      var reachedEnd = matchPtr >= (curNorm.length - slack);
+      var enoughRead = (matchPtr / curNorm.length) >= 0.7; // au moins 70% lu dans l'ordre
 
-      // --- Début du verset suivant reconnu ? ---
+      // Filet : début NET du verset suivant (≥85%) après avoir bien avancé
       var nw = wordsOf(p[index + 1] || "");
       var head = nw.slice(0, Math.min(3, nw.length)).join(" ");
       var heardHead = heard.slice(-3).join(" ");
-      var headScore = head ? similarity(heardHead, head) : 0;
+      var nextStarted = head && similarity(heardHead, head) >= 0.85 && enoughRead;
 
-      var reachedEnd = matchPtr >= curNorm.length;                 // tous les mots atteints
-      var mostlyDone = cov >= threshold;                            // couverture suffisante
-      var almostAll  = (matchPtr / curNorm.length) >= 0.8;          // presque tout lu dans l'ordre
-
-      if (reachedEnd || mostlyDone || almostAll || (head && headScore >= threshold)) {
-        statusEl.textContent = "✅ Fin du verset reconnue (" + Math.round(Math.max(cov, matchPtr / curNorm.length) * 100) + " %)";
-        if (index < p.length - 1) { goto(index + 1); }
-        else { statusEl.textContent = "🏁 Dernier écran atteint"; }
+      if ((reachedEnd && enoughRead) || nextStarted) {
+        statusEl.textContent = "✅ Fin du verset (" + Math.round((matchPtr / curNorm.length) * 100) + " %)";
+        if (index < p.length - 1) goto(index + 1);
+        else statusEl.textContent = "🏁 Dernier écran atteint";
       }
     };
     recognizer = r;
   }
 
   function updateListenBtn() {
-    if (listening) {
-      listenBtn.textContent = "🔇 Arrêter";
-      listenBtn.className = "big stop";
-    } else {
-      listenBtn.textContent = "🎙 Écouter";
-      listenBtn.className = "big listen";
-    }
-    listenBtn.disabled = !auto;
-    pauseBtn.disabled = !auto;
+    if (listening) { listenBtn.textContent = "🔇 Arrêter"; listenBtn.className = "big stop"; }
+    else { listenBtn.textContent = "🎙 Écouter"; listenBtn.className = "big listen"; }
+    listenBtn.disabled = !auto; pauseBtn.disabled = !auto;
   }
-
   function reallyStart() {
-    if (srRunning) return;                 // déjà en cours : ne pas relancer (évite InvalidStateError)
+    if (srRunning) return;
     try { recognizer.start(); }
-    catch (e) {
-      // "already started" => on ignore ; sinon on réessaie une fois
-      if (e && e.name === "InvalidStateError") { return; }
-      setTimeout(function () { try { recognizer.start(); } catch (_) {} }, 300);
-    }
+    catch (e) { if (e && e.name === "InvalidStateError") return; setTimeout(function () { try { recognizer.start(); } catch (_) {} }, 300); }
   }
-
   function startListen() {
-    if (!recognizer) { statusEl.textContent = "Reconnaissance vocale non disponible dans ce navigateur"; return; }
+    if (!recognizer) { statusEl.textContent = "Reconnaissance vocale non disponible"; return; }
     if (!auto) return;
-    // file:// : le moteur vocal de Chrome/Edge refuse de démarrer (origine null)
-    if (location.protocol === "file:") {
-      statusEl.textContent = "⚠️ Ouvert en fichier local : le micro peut ne pas démarrer. Préférez http:// (serveur local ou GitLab Pages).";
-    } else if (!window.isSecureContext) {
-      statusEl.textContent = "🔒 Le micro nécessite HTTPS. Déployez l'app ou ouvrez-la en https://.";
-    }
+    if (location.protocol === "file:") statusEl.textContent = "⚠️ Fichier local : préférez https:// (GitHub Pages).";
     restartWanted = true; paused = false; listening = true;
-    overlay.classList.add("hidden");
-    requestWakeLock();
-    updateListenBtn();
-    paintWords();
-
-    // Pré-demande d'autorisation micro (déclenche la fenêtre du navigateur, capte les refus)
+    overlay.classList.add("hidden"); requestWakeLock(); updateListenBtn(); paintWords();
     if (!micGranted && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       statusEl.textContent = "⏳ Autorisation du micro…";
       navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(function (stream) {
-          micGranted = true;
-          stream.getTracks().forEach(function (t) { t.stop(); }); // on libère, SpeechRecognition gère son propre flux
-          reallyStart();
-        })
-        .catch(function () {
-          restartWanted = false; listening = false; updateListenBtn();
-          statusEl.textContent = "🚫 Micro refusé. Autorisez-le via le cadenas 🔒 de la barre d'adresse, puis relancez.";
-        });
-    } else {
-      reallyStart();
-    }
+        .then(function (stream) { micGranted = true; stream.getTracks().forEach(function (t) { t.stop(); }); reallyStart(); })
+        .catch(function () { restartWanted = false; listening = false; updateListenBtn(); statusEl.textContent = "🚫 Micro refusé (🔒 barre d'adresse ▸ autoriser)."; });
+    } else { reallyStart(); }
   }
   function stopListen() {
     restartWanted = false; listening = false;
     try { if (recognizer) recognizer.abort(); } catch (e) {}
-    srRunning = false;
-    releaseWakeLock();
-    statusEl.textContent = "Arrêté";
-    updateListenBtn();
-    paintWords();
+    srRunning = false; releaseWakeLock(); statusEl.textContent = "Arrêté"; updateListenBtn(); paintWords();
   }
   function togglePause() {
     if (!paused) {
-      paused = true;
-      try { if (recognizer) recognizer.abort(); } catch (e) {}
-      srRunning = false;
+      paused = true; try { if (recognizer) recognizer.abort(); } catch (e) {} srRunning = false;
       statusEl.textContent = "🧎 En pause — position conservée (écran " + (index + 1) + ")";
-      pauseBtn.textContent = "▶ Reprendre";
-      overlay.classList.remove("hidden");
+      pauseBtn.textContent = "▶ Reprendre"; overlay.classList.remove("hidden");
     } else {
-      paused = false;
-      pauseBtn.textContent = "⏸ Pause prière";
-      overlay.classList.add("hidden");
-      // reprise : le micro est déjà autorisé, on relance directement
-      restartWanted = true; listening = true;
-      requestWakeLock(); updateListenBtn();
-      setTimeout(reallyStart, 200);
+      paused = false; pauseBtn.textContent = "⏸ Pause prière"; overlay.classList.add("hidden");
+      restartWanted = true; listening = true; requestWakeLock(); updateListenBtn(); setTimeout(reallyStart, 200);
     }
   }
+  function toggleFullscreen() { try { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); } catch (e) {} }
 
-  // ---- plein écran ----
-  function toggleFullscreen() {
-    try {
-      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-      else document.exitFullscreen();
-    } catch (e) {}
-  }
+  function showPlayer() { editor.style.display = "none"; player.style.display = "flex"; index = 0; render(); setProgress(0); statusEl.textContent = "Prêt à écouter"; }
+  function showEditor() { stopListen(); player.style.display = "none"; editor.style.display = "block"; refreshCount(); }
 
-  // ---- navigation écrans ----
-  function showPlayer() {
-    editor.style.display = "none";
-    player.style.display = "flex";
-    index = 0; render(); setProgress(0);
-    statusEl.textContent = "Prêt à écouter";
-  }
-  function showEditor() {
-    stopListen();
-    player.style.display = "none";
-    editor.style.display = "block";
-    refreshCount();
-  }
-
-  // ---- événements ----
   $("start").addEventListener("click", function () { auto = autoEdit.checked; autoPlay.checked = auto; updateListenBtn(); showPlayer(); });
   $("edit").addEventListener("click", showEditor);
   $("fs").addEventListener("click", toggleFullscreen);
@@ -704,7 +479,6 @@
   thr.addEventListener("input", function () { threshold = Number(thr.value); thrVal.textContent = Math.round(threshold * 100) + " %"; });
   autoPlay.addEventListener("change", function () { auto = autoPlay.checked; if (!auto) stopListen(); updateListenBtn(); });
 
-  // clavier : flèches + espace
   document.addEventListener("keydown", function (e) {
     if (player.style.display === "none") return;
     if (e.key === "ArrowRight" || e.key === "ArrowDown") { goto(index + 1); e.preventDefault(); }
@@ -712,7 +486,6 @@
     else if (e.key === " ") { togglePause(); e.preventDefault(); }
   });
 
-  // init
   initRecognizer();
   updateListenBtn();
 })();
