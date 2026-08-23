@@ -437,13 +437,27 @@
         ? (strict ? (hitPrev && hitLast) : hitLast)
         : hitLast;
 
-      // Garde-fou : au moins la moitié du bloc doit avoir été parcourue dans l'ordre
-      var enoughRead = (matchPtr / curNorm.length) >= 0.5;
+      // Garde-fou : au moins la moitié du bloc doit avoir été parcourue.
+      // On combine 2 mesures pour survivre à un redémarrage du moteur vocal
+      // (qui vide event.results et remet matchPtr en retard) :
+      //  - progression séquentielle via matchPtr
+      //  - présence brute des mots du bloc dans la fenêtre d'écoute récente
+      var seqRatio = matchPtr / curNorm.length;
+      var recentSet = {};
+      for (var rs = 0; rs < recent.length; rs++) recentSet[recent[rs]] = 1;
+      var seen = 0;
+      for (var cn = 0; cn < curNorm.length; cn++) if (recentSet[curNorm[cn]]) seen++;
+      var presRatio = seen / curNorm.length;
+      var enoughRead = seqRatio >= 0.5 || presRatio >= 0.5;
 
       if (trigger && enoughRead) {
+        console.log("MATCH DETECTE", { trigger: trigger, seqRatio: seqRatio, presRatio: presRatio, matchPtr: matchPtr, blocLen: curNorm.length });
+        console.log("PAGE AVANT", index);
         statusEl.textContent = "✅ 2 derniers mots reconnus";
-        if (index < p.length - 1) goto(index + 1);
-        else statusEl.textContent = "🏁 Dernier écran atteint";
+        if (index < p.length - 1) { goto(index + 1); console.log("PAGE APRES", index); }
+        else { statusEl.textContent = "🏁 Dernier écran atteint"; console.log("PAGE APRES (dernier)", index); }
+      } else if (trigger && !enoughRead) {
+        console.log("TRIGGER IGNORE (enoughRead=false)", { seqRatio: seqRatio, presRatio: presRatio, matchPtr: matchPtr, blocLen: curNorm.length });
       }
     };
     recognizer = r;
